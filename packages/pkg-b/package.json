@@ -1,6 +1,6 @@
 {
   "name": "pkg-b",
   "scripts": {
-    "build": "echo building pkg-b"
+    "build": "echo saysomething && read foo && echo \"building-pkg-b:$foo\""
   }
 }
