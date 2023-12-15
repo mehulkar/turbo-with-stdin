@@ -1,7 +1,8 @@
 {
-    "pipeline": {
-        "build": {
-            "cache": false
-        }
-    }
+	"pipeline": {
+		"build": {
+			"cache": false,
+			"interactive": true
+		}
+	}
 }
