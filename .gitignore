@@ -1,3 +1,17 @@
 node_modules
 .turbo
 target/
+
+
+
+packages/shopify-example/.cache
+packages/shopify-example/build
+packages/shopify-example/app/build
+packages/shopify-example/public/build/
+packages/shopify-example/public/_dev
+packages/shopify-example/app/public/build
+packages/shopify-example/prisma/dev.sqlite
+packages/shopify-example/prisma/dev.sqlite-journal
+database.sqlite
+
+.env
