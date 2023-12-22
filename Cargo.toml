@@ -6,8 +6,18 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-pty-process = { version = "*", features = ["async"] }
-futures = "0.3.26"
-tokio = { version = "1.35.0", features = ["full"] }
-pty = "0.2"
-libc = "*"
+# pty-process = { version = "*", features = ["async"] }
+# futures = "0.3.26"
+# tokio = { version = "0.2.9", features = ["full"] }
+# # pty = "0.2"
+# libc = "*"
+# mio = "*"
+# nix = "*"
+
+termion = "*"
+mio = "0.6.20"
+tokio = { version = "0.2.9", features = ["full"] }
+lazy_static = "1.4.0"
+libc = "0.2.66"
+futures-util = "0.3.1"
+nix = "0.16.1"
