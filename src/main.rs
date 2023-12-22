@@ -28,7 +28,8 @@ async fn run_shell() -> Result<()> {
     let (rows, cols) = termion::terminal_size()?;
 
     // spawn a shell.
-    let mut child = Command::new("/bin/sh")
+    let mut child = Command::new("pnpm")
+        .args(vec!["-F", "pkg-a", "run", "build"])
         .pty()
         .pty_size(cols, rows)
         .new_session()
@@ -36,6 +37,7 @@ async fn run_shell() -> Result<()> {
 
     // set the local tty into raw mode.
     let raw_guard = io::stdout().into_raw_mode()?;
+
     // handles to process stdin/stdout.
     let pty_stdin = child.stdin.take().unwrap();
     let pty_stdout = child.stdout.take().unwrap();
