@@ -23,11 +23,6 @@ async fn main() {
 }
 
 async fn run_shell() -> Result<()> {
-    // open output file.
-    let logfile = std::fs::OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open("shell_log.txt")?;
 
     // get terminal size.
     let (rows, cols) = termion::terminal_size()?;
@@ -39,8 +34,6 @@ async fn run_shell() -> Result<()> {
         .new_session()
         .spawn()?;
 
-    println!("spawned /bin/sh, pid: {}. logging to shell_log.txt.", child.id());
-
     // set the local tty into raw mode.
     let raw_guard = io::stdout().into_raw_mode()?;
     // handles to process stdin/stdout.
@@ -49,7 +42,7 @@ async fn run_shell() -> Result<()> {
 
     // copy pty stdout -> tty stdout, and log.
     let from_pty = task::spawn(async move {
-        copy_pty_tty(pty_stdout, io::stdout(), logfile).await
+        copy_pty_tty(pty_stdout, io::stdout()).await
     });
 
     // copy tty_stdin -> pty_stdin.
@@ -69,11 +62,10 @@ async fn run_shell() -> Result<()> {
 }
 
 // copy AsyncRead -> Write.
-async fn copy_pty_tty<R, W, L>(mut from: R, mut to: W, mut log: L) -> io::Result<()>
+async fn copy_pty_tty<R, W>(mut from: R, mut to: W) -> io::Result<()>
 where
     R: AsyncRead + Unpin,
     W: io::Write + Send + 'static,
-    L: io::Write + Send + 'static,
 {
     let mut buffer = [0u8; 1000];
     loop {
@@ -84,9 +76,7 @@ where
         // tokio doesn't have async-write to stdout, so use block-in-place.
         task::block_in_place(|| {
             to.write_all(&buffer[0..n])?;
-            to.flush()?;
-            log.write_all(&buffer[0..n])?;
-            log.flush()
+            to.flush()
         })?;
     }
     Ok(())
