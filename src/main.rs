@@ -2,34 +2,30 @@
 // https://github.com/miquels/tokio-process-pty/blob/5686cfd11539570b3d739555b5f17de184e4fdfd/examples/shell_log.rs
 // Copied and some changes to make it work with local crate.
 
-use std::io;
 use std::process::exit;
+use std::{io, vec};
 use termion::raw::IntoRawMode;
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use tokio::task;
-use tokio::io::{AsyncRead, AsyncWrite, AsyncReadExt, AsyncWriteExt};
 use tokioprocesspty::Command;
-
 mod tokioprocesspty;
-
-// handy helper.
-type Result<T, E = Box<dyn std::error::Error>> = std::result::Result<T, E>;
 
 #[tokio::main]
 async fn main() {
-    if let Err(e) = run_shell().await {
-        println!("run_shell: {}", e);
-    }
+    let child = spawn("pnpm", vec!["-F", "pkg-a", "run", "build"])
+        .await
+        .unwrap();
+    let status = child.await.unwrap();
+
+    println!("process exited with status {:?}", status);
     exit(0);
 }
 
-async fn run_shell() -> Result<()> {
-
-    // get terminal size.
+async fn spawn(prog: &str, args: Vec<&str>) -> io::Result<tokioprocesspty::Child> {
+    // get terminal size and spawn a shell.
     let (rows, cols) = termion::terminal_size()?;
-
-    // spawn a shell.
-    let mut child = Command::new("pnpm")
-        .args(vec!["-F", "pkg-a", "run", "build"])
+    let mut child = Command::new(prog)
+        .args(args)
         .pty()
         .pty_size(cols, rows)
         .new_session()
@@ -43,24 +39,16 @@ async fn run_shell() -> Result<()> {
     let pty_stdout = child.stdout.take().unwrap();
 
     // copy pty stdout -> tty stdout, and log.
-    let from_pty = task::spawn(async move {
-        copy_pty_tty(pty_stdout, io::stdout()).await
-    });
+    let from_pty = task::spawn(async move { copy_pty_tty(pty_stdout, io::stdout()).await });
 
     // copy tty_stdin -> pty_stdin.
-    let to_pty = task::spawn(async move {
-        copy_tty_pty(io::stdin(), pty_stdin).await
-    });
+    let to_pty = task::spawn(async move { copy_tty_pty(io::stdin(), pty_stdin).await });
 
     // wait for the first one to finish.
     let _ = futures_util::future::select(from_pty, to_pty).await;
     drop(raw_guard);
 
-    // Collect exit status.
-    let status = child.await?;
-    println!("process exited with status {:?}", status);
-
-    Ok(())
+    Ok(child)
 }
 
 // copy AsyncRead -> Write.
@@ -93,9 +81,7 @@ where
     loop {
         let mut buffer = [0u8; 1000];
         // tokio doesn't have async-read from stdin, so use block-in-place.
-        let n = task::block_in_place(|| {
-            from.read(&mut buffer[..])
-        })?;
+        let n = task::block_in_place(|| from.read(&mut buffer[..]))?;
         if n == 0 {
             break;
         }
