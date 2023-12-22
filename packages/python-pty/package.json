@@ -1,0 +1,6 @@
+{
+  "name": "python-pty",
+  "scripts": {
+    "check": "python3 thing.py"
+  }
+}
