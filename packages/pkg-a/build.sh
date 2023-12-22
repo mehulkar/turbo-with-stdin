@@ -2,4 +2,4 @@
 
 echo saysomething
 read foo
-echo "$foo"
+echo "you said: $foo"
