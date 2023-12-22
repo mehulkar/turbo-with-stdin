@@ -1,8 +1,6 @@
 use pty;
 
-// use std::ffi::CString;
 use std::io::Read;
-// use std::ptr;
 use std::process::Command;
 
 use pty::fork::*;
