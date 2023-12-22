@@ -315,19 +315,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "20145670ba436b55d91fc92d25e71160fbfbdd57831631c8d7d36377a476f1cb"
 
 [[package]]
-name = "rust-stdin-tokio"
-version = "0.1.0"
-dependencies = [
- "futures-util",
- "lazy_static",
- "libc",
- "mio",
- "nix",
- "termion",
- "tokio",
-]
-
-[[package]]
 name = "signal-hook-registry"
 version = "1.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -412,6 +399,19 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 1.0.109",
+]
+
+[[package]]
+name = "turbo-with-stdin"
+version = "0.1.0"
+dependencies = [
+ "futures-util",
+ "lazy_static",
+ "libc",
+ "mio",
+ "nix",
+ "termion",
+ "tokio",
 ]
 
 [[package]]
