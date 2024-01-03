@@ -5,6 +5,7 @@
 use std::{
     io::{self, BufRead},
     process::exit,
+    str::Bytes,
     sync, thread, vec,
 };
 // use termion::raw::IntoRawMode;
@@ -46,35 +47,7 @@ async fn main() {
 
 async fn spawn(task: &str, prog: &str, args: Vec<&str>) -> io::Result<tokioprocesspty::Child> {
     println!("Spawning {} with {} and args {:?}", task, prog, args);
-    let (sender, receiver) = sync::mpsc::sync_channel::<(
-        tokioprocesspty::ChildStdin,
-        tokioprocesspty::ChildStdout,
-        &str,
-    )>(1);
-
-    thread::spawn(async || {
-        let mut parent_stdin_handle = io::stdin().lock();
-        let mut parent_stdout_handle = io::stdout().lock();
-
-        let (mut child_stdin, child_stdout, task_id) = match receiver.recv() {
-            Ok(stdin) => stdin,
-            // Exit no message from child
-            Err(_) => return,
-        };
-
-        println!("Granting stdin lock to {}", task_id);
-
-        let mut buffer = String::new();
-        let _ = parent_stdin_handle.read_line(&mut buffer);
-
-        // let raw_guard = io::stdout().into_raw_mode().expect("failed raw mode");
-        // let from_pty =
-        //     task::spawn(async move { copy_pty_tty(child_stdout, parent_stdout_handle).await });
-
-        copy_tty_pty(parent_stdin_handle, child_stdin);
-
-        // drop(raw_guard);
-    });
+    let (byte_sender, mut byte_receiver) = tokio::sync::mpsc::unbounded_channel::<Vec<u8>>();
 
     let (rows, cols) = termion::terminal_size()?;
     let mut child = Command::new(prog)
@@ -84,9 +57,30 @@ async fn spawn(task: &str, prog: &str, args: Vec<&str>) -> io::Result<tokioproce
         .new_session()
         .spawn()?;
 
-    let stdin = child.stdin.take().unwrap();
-    let stdout = child.stdout.take().unwrap();
-    let _ = sender.send((stdin, stdout, task.clone()));
+    let mut child_stdin = child.stdin.take().unwrap();
+    let child_stdout = child.stdout.take().unwrap();
+    let task_id = task.to_string();
+
+    thread::spawn(move || {
+        let mut parent_stdin_handle = io::stdin().lock();
+        println!("Granted stdin lock to {task_id}");
+        let mut buffer = String::new();
+        let _ = parent_stdin_handle.read_line(&mut buffer);
+        byte_sender.send(buffer.into_bytes()).unwrap();
+    });
+
+    tokio::spawn(async move {
+        match byte_receiver.recv().await {
+            Some(bytes) => {
+                child_stdin.write_all(&bytes).await.unwrap();
+            }
+            None => println!("No bytes received"),
+        }
+    });
+
+    tokio::spawn(async move {
+        copy_pty_tty(child_stdout, io::stdout()).await.unwrap();
+    });
 
     Ok(child)
 }
