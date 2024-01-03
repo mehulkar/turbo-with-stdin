@@ -118,8 +118,8 @@ mod imp;
 
 mod kill;
 
-use tokio::io::{AsyncRead, AsyncWrite};
 use kill::Kill;
+use tokio::io::{AsyncRead, AsyncWrite};
 
 use std::ffi::OsStr;
 use std::future::Future;
@@ -637,6 +637,7 @@ impl Command {
     /// }
     /// ```
     pub fn spawn(&mut self) -> io::Result<Child> {
+        println!("Spawned child");
         imp::spawn_child(self).map(|spawned_child| Child {
             child: ChildDropGuard {
                 inner: spawned_child.child,
