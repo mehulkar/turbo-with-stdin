@@ -17,7 +17,7 @@ edition = "2021"
 
 termion = "*"
 mio = "0.6.20"
-tokio = { features = ["full"] }
+tokio = { version = "1.25.0", features = ["full"] }
 lazy_static = "1.4.0"
 libc = "0.2.66"
 futures-util = "0.3.1"

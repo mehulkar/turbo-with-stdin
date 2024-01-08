@@ -1,11 +1,11 @@
 use futures::{stream::FuturesUnordered, StreamExt};
 use portable_pty::{Child, CommandBuilder, NativePtySystem, PtySize, PtySystem};
 use std::{
+    env,
     io::{self, BufRead, Write},
     process::exit,
     thread, vec,
 };
-use tokio::{io::AsyncRead, task};
 
 #[tokio::main]
 async fn main() {
@@ -47,18 +47,12 @@ async fn spawn(
     // Build a command to run
     let mut cmd = CommandBuilder::new(prog);
     cmd.args(args);
+    cmd.cwd(env::current_dir().unwrap());
 
     // create a pty pair.
     // - The "master" side connects to the parent process
     // - The "slave" side connects to the child process
-    let pair = pty_system
-        .openpty(PtySize {
-            rows: 24,
-            cols: 80,
-            pixel_width: 0,
-            pixel_height: 0,
-        })
-        .unwrap();
+    let pair = pty_system.openpty(PtySize::default()).unwrap();
 
     let child = pair.slave.spawn_command(cmd).map_err(anyhow::Error::msg); // the child process
     let mut reader = pair.master.try_clone_reader().unwrap(); // we will read child stdout from this
@@ -80,6 +74,7 @@ async fn spawn(
         let _ = handle.read_line(&mut s);
         in_sender.send(s.into_bytes()).unwrap();
     });
+
     tokio::spawn(async move {
         match in_receiver.recv().await {
             Some(bytes) => {
@@ -99,7 +94,8 @@ async fn spawn(
     tokio::spawn(async move {
         match out_receiver.recv().await {
             Some(bytes) => {
-                io::stdout().write_all(&bytes).unwrap();
+                let mut handle = io::stdout().lock();
+                handle.write_all(&bytes).unwrap();
             }
             None => println!("No bytes received"),
         }
